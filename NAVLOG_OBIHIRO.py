@@ -92,33 +92,33 @@ class Legs:
     #地点間の距離とTC（真方位）をまとめる。
     #地点1-地点2 = (距離[nm], TC（真方位）[deg], "地点1", "地点2", 偏差, SEA[ft])
 
-    RJCB_Moiwabashi = (13, 72, "RJCB", "茂岩橋", 9, 2000)
-    Moiwabashi_RJCB = (13,  252, "茂岩橋", "RJCB", 9, 2000)
+    RJCB_Moiwabashi      = (13, 72, "RJCB", "茂岩橋", 9, 2000)
+    Moiwabashi_RJCB      = (13,  252, "茂岩橋", "RJCB", 9, 2000)
 
-    Moiwabashi_Otsu = (9.5, 139, "茂岩橋", "大津", 9, 1600)
-    Otsu_Moiwabashi = (9.5, 319, "大津", "茂岩橋", 9, 1600)
+    Moiwabashi_Otsu      = (9.5, 139, "茂岩橋", "大津", 9, 1600)
+    Otsu_Moiwabashi      = (9.5, 319, "大津", "茂岩橋", 9, 1600)
 
-    Otsu_Shiranuka  = (24, 49, "大津", "白糠", 9, 2100)
-    Shiranuka_Otsu  = (24, 229, "白糠", "大津", 9, 2100)
+    Otsu_Shiranuka       = (24, 49, "大津", "白糠", 9, 2100)
+    Shiranuka_Otsu       = (24, 229, "白糠", "大津", 9, 2100)
 
-    Shiranuka_RJCK  = (7, 43, "白糠", "RJCK", 9, "")
-    RJCK_Shiranuka  = (7, 223, "RJCK", "白糠", 9, "")
+    Shiranuka_RJCK       = (7, 43, "白糠", "RJCK", 9, "")
+    RJCK_Shiranuka       = (7, 223, "RJCK", "白糠", 9, "")
 
-    Moiwabashi_Nukanai = (8, 259, "茂岩橋", "糠内", 9, "")
+    Moiwabashi_Nukanai   = (8, 259, "茂岩橋", "糠内", 9, "")
 
 
-    RJCB_Arashiyama     = (11.5, 298, "RJCB", "嵐山") # ARP-東の橋
-    Arashiyama_Shintoku = (16  , 335, "嵐山", "新得")   # 過去資料より 
-    Shintoku_Furano     = (24.5, 311, "新得", "富良野") # 駅-駅
+    RJCB_Arashiyama      = (11.5, 298, "RJCB", "嵐山") # ARP-東の橋
+    Arashiyama_Shintoku  = (16  , 335, "嵐山", "新得")   # 過去資料より 
+    Shintoku_Furano      = (24.5, 311, "新得", "富良野") # 駅-駅
 
-    Shintoku_Yamabe     = (21.5, 297, "新得", "山部") # 駅-地図 
+    Shintoku_Yamabe      = (21.5, 297, "新得", "山部") # 駅-地図 
 
     Yamabe_Kamihurano    = (13.5, 16, "山部", "上士幌")  # 地図-Vrep
 
-    Furano_Biei         = (14.5, 10, "富良野", "美瑛")  # 駅-Vrep
+    Furano_Biei          = (14.5, 10, "富良野", "美瑛")  # 駅-Vrep
 
-    Kamihurano_Biei     = (8, 357, "上士幌", "美瑛")    # Vrep-Vrep
-    Biei_RJEC           = (5, 356, "美瑛", "RJEC")    # Vrep-ARP
+    Kamihurano_Biei      = (8, 357, "上士幌", "美瑛")    # Vrep-Vrep
+    Biei_RJEC            = (5, 356, "美瑛", "RJEC")    # Vrep-ARP
 
 
 def Increment05(a):
@@ -155,120 +155,64 @@ def ETE(GS, ZoneDist):   #レグのETEを0.5刻みで返す
 
 
 
-@singledispatch
-def LegList(leg: list, CumDist, CumEte, ClimbTime, ClimbDist, DescentTime, DescentDist, Vrep, DistToVrep, Phase): #Phase...1:Climb, 2:Cruise, 3:Descent
+def CruiseDescentLegList(leg: list, CumDist, CumEte, DescentTime, DescentDist, Vrep, DistToVrep): #Phase...1:Climb, 2:Cruise, 3:Descent
 
     dist, tc, pos1, pos2, var, sea, WindDir, WindVel, oat, mc = Config(leg)   #巡航高度に達して以降の情報
 
-    if Phase == "Climb":
-
-        tasClimb          = TAS(Setting.V_climb, Setting.ClimbOAT, (Setting.Cruise_ALT + Setting.FE) / 2)
-        wcaClimb, gsClimb = WCA(tasClimb, tc, Setting.ClimbWind[0], Setting.ClimbWind[1])
-        mhClimb           = mc + wcaClimb
-
-        ClimbDist        += ( gsClimb / 60 ) * ClimbTime
+    tas      = TAS(Setting.V_cruise, oat, Setting.Cruise_ALT)
+    wca, gs  = WCA(tas, tc, WindDir, WindVel)
+    mh       = mc + wca
+    ete      = ETE(gs, dist)
         
 
-        tasRCA            = TAS(Setting.V_cruise, oat, Setting.Cruise_ALT)
-        wcaRCA, gsRCA     = WCA(tasRCA, tc, WindDir, WindVel)
-        mhRCA             = mc + wcaRCA
-
-        CumDist += dist
-
-        if CumDist < ClimbDist:
-
-            ete  = ETE(gsClimb, ClimbDist)
-            CumEte += ete
-
-            return [
-                    [pos1,  pos2, " ",               "",              "",       "", tc, var, mc,                                "",     "",        "", str(dist)    + "/" + str(CumDist),      "", str(ete) + "/" + str(CumEte), "", "", "", "SECT/REM FUEL"],
-                    [" " ,  pos2, "↗︎", Setting.ClimbOAT, Setting.V_Climb, tasClimb, "",  "", "", str(WindDir) + "/" + str(WindVel), wcaClimb, mhClimb, str(dist) + "/"                  ,   gsRCA, str(ete) + "/"              , "", "", "", "SECT/REM FUEL"],
-                    [" ", "[" + str(sea) + "]"]
-                   ], ete, False   #False：上昇継続 True：上昇完了
-        else:
-
-            distRCA = dist - ClimbDist
-
-            ClimbDist = Increment05( gsClimb * ClimbTime / 60)   #0.5nm単位に変更
-            distRCA   = Increment05( distRCA )   #0.5nm単位に変更
-            eteRCA    = ETE(gsRCA, distRCA)
-            ete = ClimbTime + eteRCA
-            CumEte += ete
-
-            distRCA   = Increment05( distRCA )   #0.5nm単位に変更
-
-            return [
-                [pos1,  pos2, "    "            ,              " ",              " ",      " ", tc, var, mc,                                                          " ",        "",      "",   str(dist)    + "/" + str(CumDist),      "",  str(ete)   + "/" + str(CumEte), "", "", "", "SECT/REM FUEL"],
-                [" " , "RCA", "↗︎"               , Setting.ClimbOAT,  Setting.V_climb, tasClimb, "",  "", "", str(Setting.ClimbWind[0]) +  "/" + str(Setting.ClimbWind[1]),  wcaClimb, mhClimb, str(ClimbDist) + "/"               , gsClimb,  str(ClimbTime) +  "/", "", "", "", "SECT/REM FUEL"],
-                [" " ,  pos2, Setting.Cruise_ALT,              oat, Setting.V_cruise,   tasRCA, "",  "", "",                            str(WindDir) + "/" + str(WindVel),    wcaRCA,   mhRCA, str(distRCA)   + "/"               ,   gsRCA,  str(eteRCA)    +  "/", "", "", "", "SECT/REM FUEL"],
-                [" ", "（" + str(leg[5]) + "）"]
-                ], ete, True
-    
-    elif Phase == "Cruise":
-
-        tas      = TAS(Setting.V_cruise, oat, Setting.Cruise_ALT)
-        wca, gs  = WCA(tas, tc, WindDir, WindVel)
-        mh       = mc + wca
-        ete      = ETE(gs, dist)
-        
-        
-
-        print(pos1, pos2, DistToVrep, DescentDist)
-        if DistToVrep - dist <= DescentDist:
+    print(pos1, pos2, DistToVrep, DescentDist)
+    if DistToVrep - dist <= DescentDist:
             
-            distEOC = DistToVrep - round(DescentDist, 1) #dist - (DescentDist - DistToVrep)
-            if pos2 == Vrep:
-                EOCtoVrep = dist - distEOC
-                tasDescent            = TAS(Setting.V_descent, Setting.DescentOAT, (Setting.Cruise_ALT + VrepALT[Vrep]) / 2)
-                wcaDescent, gsDescent = WCA(tasDescent, tc, Setting.DescentWind[0], Setting.DescentWind[1])
-                mhDescent             = mc + wcaDescent
+        distEOC = DistToVrep - round(DescentDist, 1) #dist - (DescentDist - DistToVrep)
+        if pos2 == Vrep:
+            EOCtoVrep = dist - distEOC
+            tasDescent            = TAS(Setting.V_descent, Setting.DescentOAT, (Setting.Cruise_ALT + VrepALT[Vrep]) / 2)
+            wcaDescent, gsDescent = WCA(tasDescent, tc, Setting.DescentWind[0], Setting.DescentWind[1])
+            mhDescent             = mc + wcaDescent
 
-                etetoEOC  = ETE(gs, distEOC)
-                etetoVrep = ETE(gsDescent, EOCtoVrep)
+            etetoEOC  = ETE(gs, distEOC)
+            etetoVrep = ETE(gsDescent, EOCtoVrep)
+            ete = etetoEOC + etetoVrep
+            CumEte  += ete
+            CumDist += dist
+            DistToVrep -= dist
+            EOCtoVrep = round(EOCtoVrep, 1)
 
-                ete = etetoEOC + etetoVrep
-                CumEte  += ete
-
-                CumDist += dist
-
-                DistToVrep -= dist
-
-                EOCtoVrep = round(EOCtoVrep, 1)
-
-                return [
-                    [pos1,  pos2,           " ",                " ",               " ",         "", tc, var, mc,                                                             " ",         "",        "",      str(dist) + "/" + str(CumDist),       " ",  str(ete)       + "/" + str(CumEte), "", "", "", "SECT/REM FUEL"],
-                    [" " , "EOC",           "↘︎",                oat,  Setting.V_cruise,        tas, "", "",  "",                               str(WindDir) + "/" + str(WindVel),        wca,        mh,   str(distEOC) + "/"               ,        gs,  str(etetoEOC)  + "/", "", "", "", "SECT/REM FUEL"],
-                    [" " ,  pos2, VrepALT[Vrep], Setting.DescentOAT[0], Setting.V_descent, tasDescent, "", "",  "", str(Setting.DescentWind[0]) + "/" + str(Setting.DescentWind[1]), wcaDescent, mhDescent, str(EOCtoVrep) + "/"               , gsDescent,  str(etetoVrep) + "/", "", "", "", "SECT/REM FUEL"],
-                    [" ", "[" + str(sea) + "]"]
-                        ], ete, True
-
-        CumEte  += ete
-        CumDist += dist
-
-        DistToVrep -= dist
-
-        tasDescent            = TAS(Setting.V_descent, Setting.DescentOAT, (Setting.Cruise_ALT + VrepALT["白糠"]) / 2)
-        wcaDescent, gsDescent = WCA(tasDescent, tc, Setting.DescentWind[0], Setting.DescentWind[1])
-
-        mhDescent           = mc + wcaDescent
-
-        DescentTime = (Setting.Cruise_ALT - VrepALT["白糠"]) / Setting.DescentRate
-        DescentDist = DescentTime * gsDescent / 60
-
-
-
-        return [
-                [pos1, pos2, Setting.Cruise_ALT, oat, Setting.V_cruise, tas, tc, var, mc, str(WindDir) + "/" + str(WindVel), wca, mh, str(dist) + "/" + str(CumDist), gs, str(ete) + "/" + str(CumEte), "", "", "", "/"],
+            return [
+                [pos1,  pos2,           " ",                " ",               " ",         "", tc, var, mc,                                                             " ",         "",        "",      str(dist) + "/" + str(CumDist),       " ",  str(ete)       + "/" + str(CumEte), "", "", "", "SECT/REM FUEL"],
+                [" " , "EOC",           "↘︎",                oat,  Setting.V_cruise,        tas, "", "",  "",                               str(WindDir) + "/" + str(WindVel),        wca,        mh,   str(distEOC) + "/"               ,        gs,  str(etetoEOC)  + "/", "", "", "", "SECT/REM FUEL"],
+                [" " ,  pos2, VrepALT[Vrep], Setting.DescentOAT[0], Setting.V_descent, tasDescent, "", "",  "", str(Setting.DescentWind[0]) + "/" + str(Setting.DescentWind[1]), wcaDescent, mhDescent, str(EOCtoVrep) + "/"               , gsDescent,  str(etetoVrep) + "/", "", "", "", "SECT/REM FUEL"],
                 [" ", "[" + str(sea) + "]"]
-               ], ete, False
-    
-    elif Phase == "Descent":
-        return
+                    ], ete, True
+    CumEte  += ete
+    CumDist += dist
 
-@LegList.register
-def _(leg: list, CumDist, CumEte, ClimbTime, ClimbDist):
+    DistToVrep -= dist
+
+    tasDescent            = TAS(Setting.V_descent, Setting.DescentOAT, (Setting.Cruise_ALT + VrepALT["白糠"]) / 2)
+    wcaDescent, gsDescent = WCA(tasDescent, tc, Setting.DescentWind[0], Setting.DescentWind[1])
+
+    mhDescent           = mc + wcaDescent
+
+    DescentTime = (Setting.Cruise_ALT - VrepALT["白糠"]) / Setting.DescentRate
+    DescentDist = DescentTime * gsDescent / 60
+
+
+
+    return [
+            [pos1, pos2, Setting.Cruise_ALT, oat, Setting.V_cruise, tas, tc, var, mc, str(WindDir) + "/" + str(WindVel), wca, mh, str(dist) + "/" + str(CumDist), gs, str(ete) + "/" + str(CumEte), "", "", "", "/"],
+            [" ", "[" + str(sea) + "]"]
+           ], ete, False
+
+
+def ClimbLegList(leg: list, CumDist, CumEte, ClimbTime, ClimbDist):
+
     dist, tc, pos1, pos2, var, sea, WindDir, WindVel, oat, mc = Config(leg)   #巡航高度に達して以降の情報
-
 
     tasClimb          = TAS(Setting.V_climb, Setting.ClimbOAT, (Setting.Cruise_ALT + Setting.FE) / 2)
     wcaClimb, gsClimb = WCA(tasClimb, tc, Setting.ClimbWind[0], Setting.ClimbWind[1])
@@ -373,7 +317,6 @@ def WriteFile(Course, WindsTemp, Vrep, DescentLeg):
         else:
             break
 
-    #print(DescentDist)
 
 
     #ClimbTime = Increment05(ClimbTime)
@@ -381,14 +324,14 @@ def WriteFile(Course, WindsTemp, Vrep, DescentLeg):
     for i in range(len(Course)): #レグのタプルの末尾に風向風速を追加
         Course[i] += WindsTemp[i]
 
-    
+
     with open('sample.csv', 'w') as f:
         writer = csv.writer(f)
         writer.writerow(["FROM", "TO", "PA", "TOAT", "CAS", "TAS", "TC", "VAR", "MC", "WIND", "WCA", "MH", "ZONE/CUM DIST", "GS", "ZONE/CUM ETE", "ETO", "ATO", "ATE", "SECT/REM FUEL"])
         for leg in Course:
             dist, tc, pos1, pos2, var, sea, WindDir, WindVel, oat, mc = Config(leg)   #巡航高度に達して以降の情報
             if RCA == False:
-                legLists, ete, RCA = LegList(leg, CumDist, CumEte, ClimbTime, ClimbDist, DescentTime, DescentDist, Vrep, DistToVrep, "Climb")
+                legLists, ete, RCA = ClimbLegList(leg, CumDist, CumEte, ClimbTime, ClimbDist)
 
                 if RCA:
                     legList   = legLists[0]
@@ -419,7 +362,7 @@ def WriteFile(Course, WindsTemp, Vrep, DescentLeg):
                 #    writer.writerow([pos1, pos2, "↗︎",               "TOAT", Setting.V_climb,  "TAS", tc, "VAR", "MC", "WIND", "WCA", "MH",  str(leg[0]) + "/" + str(CumDist), "GS", "ZONE/CUM ETE", "ETO", "ATO", "ATE", "SECT/REM FUEL"])
             elif EOC == False:
                 #print(leg)
-                legLists, ete, EOC = LegList(leg, CumDist, CumEte, ClimbTime, ClimbDist, DescentTime, DescentDist, Vrep, DistToVrep, "Cruise")
+                legLists, ete, EOC = CruiseDescentLegList(leg, CumDist, CumEte, DescentTime, DescentDist, Vrep, DistToVrep)
                 if EOC == True:
                     legList     = legLists[0]
                     CruiseList  = legLists[1]
